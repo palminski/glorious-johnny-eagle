@@ -1,0 +1,1659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fabula Ultima Tracker</title>
+<style>
+  :root {
+    --bg: #f4efe6;
+    --card: #fffaf2;
+    --ink: #2b2420;
+    --muted: #7a6d62;
+    --border: #d9cbb8;
+    --digit-bg: #2b2420;
+    --digit-ink: #fffaf2;
+    --hp: #c0392b;
+    --mp: #2e6fb7;
+    --ip: #b8860b;
+    --fp: #7b3fa0;
+    --calc: #1f6f5c;
+    --full: #4ade80;      /* digit colour when at max (digits sit on a dark tile) */
+    --overheal: #facc15;  /* digit colour when above max */
+    --over-text: #a16207;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1816;
+      --card: #26211e;
+      --ink: #f1e9dd;
+      --muted: #a59789;
+      --border: #3d3530;
+      --digit-bg: #0f0d0c;
+      --digit-ink: #f1e9dd;
+      --calc: #5fd3b0;
+      --over-text: #facc15;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px 40px;
+  }
+  .site-header {
+    background: var(--digit-bg);
+    color: var(--digit-ink);
+    margin: -24px -16px 24px;
+    padding: 14px 16px;
+  }
+  .site-header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .site-header h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    letter-spacing: 0.04em;
+  }
+  .header-actions { display: flex; gap: 8px; }
+  .header-btn {
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--digit-ink);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 8px;
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+  .header-btn:hover { border-color: var(--digit-ink); }
+  .rest-bar {
+    max-width: 1100px;
+    margin: 14px auto 0;
+    display: flex;
+    justify-content: flex-start;
+  }
+  .modal-body { padding: 16px; border-top: 1px solid var(--border); display: grid; gap: 10px; }
+  .modal-body textarea {
+    width: 100%;
+    min-height: 240px;
+    resize: vertical;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+  }
+  .modal-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .modal-msg { font-size: 0.85rem; color: var(--muted); }
+  .modal-msg.error { color: var(--hp); font-weight: 600; }
+  .character {
+    max-width: 1100px;
+    margin: 0 auto 20px;
+  }
+  .character label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .character input {
+    width: 100%;
+    font: inherit;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .character input:focus {
+    outline: none;
+    border-color: var(--ink);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  @media (min-width: 600px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1000px) {
+    .grid { grid-template-columns: repeat(4, 1fr); }
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-top: 6px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .stat h2 {
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+  .stat h2 small {
+    color: var(--muted);
+    font-weight: normal;
+    letter-spacing: 0;
+    font-size: 0.8rem;
+    margin-left: 6px;
+  }
+  .counter { display: flex; gap: 8px; }
+  .place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .digit {
+    width: 56px;
+    height: 72px;
+    display: grid;
+    place-items: center;
+    background: var(--digit-bg);
+    color: var(--digit-ink);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 2.6rem;
+    font-weight: 700;
+    border-radius: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .place button {
+    width: 56px;
+    height: 36px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink);
+    border-radius: 8px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .place button:hover { border-color: var(--accent); color: var(--accent); }
+  .place button:active { transform: scale(0.95); }
+  .place button:disabled { opacity: 0.35; cursor: default; }
+  .label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  /* ---------- Classes ---------- */
+  .section-head {
+    max-width: 1100px;
+    margin: 36px auto 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-head h2 { margin: 0; font-size: 1.25rem; }
+  .section-head h2 small {
+    color: var(--muted);
+    font-weight: normal;
+    font-size: 0.9rem;
+    margin-left: 8px;
+  }
+  .add-class { display: flex; gap: 8px; }
+  .add-class select, .btn {
+    font: inherit;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+  .btn { cursor: pointer; }
+  .btn:hover:not(:disabled) { border-color: var(--ink); }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .bonuses {
+    max-width: 1100px;
+    margin: 0 auto 16px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .class-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  @media (min-width: 1000px) {
+    .class-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .class-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    min-width: 0;
+  }
+  .class-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .class-top h3 { margin: 0; flex: 1; font-size: 1.15rem; }
+  .stepper { display: inline-flex; align-items: center; gap: 6px; }
+  .stepper button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink);
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .stepper button:hover:not(:disabled) { border-color: var(--ink); }
+  .stepper button:disabled { opacity: 0.3; cursor: default; }
+  .stepper .val {
+    min-width: 4.5ch;
+    text-align: center;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .lvl {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.85rem;
+  }
+  .remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    padding: 4px;
+  }
+  .remove:hover { color: var(--hp); }
+  .benefits {
+    margin: 10px 0 4px;
+    padding-left: 18px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .points { font-size: 0.85rem; margin: 8px 0 4px; color: var(--muted); }
+  .points strong { color: var(--ink); }
+  .skill { border-top: 1px solid var(--border); padding: 10px 0; }
+  .skill:last-child { padding-bottom: 0; }
+  .skill-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .skill-name { font-weight: 600; }
+  .skill-name small { color: var(--muted); font-weight: normal; margin-left: 4px; }
+  .skill p { margin: 6px 0 0; font-size: 0.9rem; line-height: 1.45; }
+  .skill.unlearned .skill-name, .skill.unlearned p { opacity: 0.55; }
+  .skill.unlearned p::before {
+    content: "At SL 1: ";
+    font-style: italic;
+  }
+  .calc { color: var(--calc); font-weight: 700; }
+  .empty {
+    max-width: 1100px;
+    margin: 0 auto;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px 16px;
+  }
+  /* ---------- Heroic skill modal ---------- */
+  dialog.modal {
+    width: min(760px, calc(100vw - 32px));
+    max-height: 85vh;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  dialog.modal[open] { display: flex; flex-direction: column; }
+  dialog.modal::backdrop { background: rgba(0, 0, 0, 0.55); }
+  .modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 16px 8px;
+  }
+  .modal-head h2 { margin: 0; font-size: 1.2rem; }
+  .modal-sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--ink);
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px 12px;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .modal-list {
+    border-top: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .modal-group {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 4px 0 -4px;
+  }
+  .option {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .option.locked { opacity: 0.55; }
+  .option-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .option-head h3 { margin: 0; font-size: 1.05rem; }
+  .option p { margin: 6px 0 0; font-size: 0.9rem; line-height: 1.45; }
+  .option details { margin-top: 8px; }
+  .option summary { cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+  .opt-skill { margin-top: 8px; padding-left: 12px; border-left: 2px solid var(--border); }
+  .opt-skill small { color: var(--muted); margin-left: 4px; }
+  .heroic-grid .class-card p { margin: 6px 0 0; font-size: 0.9rem; line-height: 1.45; }
+
+  /* ---------- Character row, attributes, statuses ---------- */
+  .char-row { display: flex; gap: 12px; align-items: flex-end; }
+  .char-name { flex: 1; min-width: 0; }
+  .char-level-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px 16px 6px;
+    text-align: center;
+  }
+  .char-level-box .sub-label { margin: 0; }
+  .char-level-box strong { display: block; font-size: 1.4rem; line-height: 1.3; }
+  .sub-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 6px;
+  }
+  .attr-section { max-width: 1100px; margin: 28px auto 20px; }
+  .attr-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  @media (min-width: 1000px) {
+    .attr-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+  .attr {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    min-width: 0;
+  }
+  .attr-name { font-weight: 700; letter-spacing: 0.06em; }
+  .attr-name small {
+    display: block;
+    font-weight: normal;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0;
+  }
+  .attr-die {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 4px 0 0;
+  }
+  .attr-die.lowered { color: var(--hp); }
+  .attr-base { font-size: 0.75rem; color: var(--muted); min-height: 1.2em; }
+  .die-picker {
+    display: flex;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .die-picker button {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    padding: 6px 0;
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .die-picker button + button { border-left: 1px solid var(--border); }
+  .die-picker button.on { background: var(--digit-bg); color: var(--digit-ink); font-weight: 700; }
+  .status-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.9rem;
+  }
+  .chip small { color: var(--muted); margin-left: 4px; }
+  .chip.on { background: var(--hp); border-color: var(--hp); color: #fff; }
+  .chip.on small { color: rgba(255, 255, 255, 0.85); }
+  .stat .max {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin: -4px 0 4px;
+    min-height: 2rem;
+  }
+  .stat .max strong {
+    font-size: 1.7rem;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .max .over { color: var(--over-text); font-weight: 700; }
+  .stat .sub {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+    min-height: 1.7em;
+    display: flex;
+    align-items: center;
+  }
+  .crisis-badge {
+    background: var(--hp);
+    color: #fff;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+  }
+  .stat.crisis { box-shadow: 0 0 0 2px var(--hp); }
+  .stat.full .digit { color: var(--full); }
+  .stat.over .digit { color: var(--overheal); }
+
+  /* ---------- Defenses ---------- */
+  .def-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 600px) {
+    .def-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .def-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    min-width: 0;
+  }
+  .def-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .def-value {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .def-value.lowered { color: var(--hp); }
+  .def-controls { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; align-items: flex-end; }
+  .def-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .def-field.base { flex: 1 1 220px; }
+  .def-field .sub-label { margin: 0; }
+  .def-field .die-picker { margin-top: 0; }
+  .ticker {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .ticker button {
+    width: 38px;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    font-size: 1.1rem;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .ticker button:hover:not(:disabled) { background: var(--digit-bg); color: var(--digit-ink); }
+  .ticker button:disabled { opacity: 0.3; cursor: default; }
+  .ticker input {
+    width: 3.5ch;
+    box-sizing: content-box;
+    padding: 6px 4px;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    background: var(--card);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .ticker input::-webkit-outer-spin-button,
+  .ticker input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .ticker input:focus { outline: 2px solid var(--calc); outline-offset: -2px; }
+  .def-breakdown { font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
+  .def-hint { font-size: 0.8rem; color: var(--muted); margin: 8px 0 0; }
+  .req { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  .warn { color: var(--hp); font-size: 0.85rem; font-weight: 600; margin-top: 6px; }
+  .reset {
+    display: block;
+    margin: 28px auto 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .reset:hover { color: var(--ink); border-color: var(--ink); }
+</style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <h1>Fabula Ultima Tracker</h1>
+      <div class="header-actions">
+        <button class="header-btn" id="open-save">Save</button>
+        <button class="header-btn" id="open-load">Load</button>
+      </div>
+    </div>
+  </header>
+  <div class="character">
+    <div class="char-row">
+      <div class="char-name">
+        <label for="char-name">Character name</label>
+        <input id="char-name" type="text" placeholder="Unnamed hero" autocomplete="off">
+      </div>
+      <div class="char-level-box">
+        <p class="sub-label">Level</p>
+        <strong id="char-level-big">0</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="rest-bar">
+    <button class="btn" id="rest" title="Refill HP &amp; MP and clear status effects">Rest</button>
+  </div>
+
+  <div class="attr-section">
+    <p class="sub-label">Attributes</p>
+    <div class="attr-grid" id="attr-grid"></div>
+    <p class="sub-label">Status effects</p>
+    <div class="status-row" id="status-row"></div>
+    <p class="sub-label" style="margin-top: 16px">Defenses</p>
+    <div class="def-grid" id="def-grid"></div>
+    <p class="def-hint">Pick the Attribute your armor uses (no armor: DEX for Defense, INS for Magic Defense) and set your total bonus from armor, shields, and accessories. For armor with a fixed Defense score, choose "Flat" and set the full number.</p>
+  </div>
+
+  <dialog id="save-modal" class="modal" aria-labelledby="save-title">
+    <div class="modal-head">
+      <div>
+        <h2 id="save-title">Save Character</h2>
+        <div class="modal-sub">Copy this text and keep it somewhere safe. Paste it into Load on any device to restore this character.</div>
+      </div>
+      <button class="modal-close" data-close aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="save-text" readonly spellcheck="false" aria-label="Character save data"></textarea>
+      <div class="modal-actions">
+        <button class="btn" id="copy-save">Copy to clipboard</button>
+        <span class="modal-msg" id="save-msg"></span>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="load-modal" class="modal" aria-labelledby="load-title">
+    <div class="modal-head">
+      <div>
+        <h2 id="load-title">Load Character</h2>
+        <div class="modal-sub">Paste save text from the Save button. This replaces the character currently on this page.</div>
+      </div>
+      <button class="modal-close" data-close aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="load-text" spellcheck="false" placeholder="Paste your save text here…" aria-label="Save data to load"></textarea>
+      <div class="modal-actions">
+        <button class="btn" id="do-load">Load character</button>
+        <span class="modal-msg" id="load-msg"></span>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="section-head">
+    <h2>Classes<small id="char-level"></small></h2>
+    <button class="btn" id="open-class">Add Class</button>
+  </div>
+  <p class="bonuses" id="bonuses"></p>
+  <div class="class-grid" id="class-grid"></div>
+
+  <div class="section-head">
+    <h2>Heroic Skills<small id="heroic-count"></small></h2>
+    <button class="btn" id="open-heroic">Choose Heroic Skill</button>
+  </div>
+  <div class="class-grid heroic-grid" id="heroic-grid"></div>
+
+  <dialog id="class-modal" class="modal" aria-labelledby="class-modal-title">
+    <div class="modal-head">
+      <div>
+        <h2 id="class-modal-title">Add a Class</h2>
+        <div class="modal-sub">Each skill level you take in a class raises that class's level by 1 (max 10).</div>
+      </div>
+      <button class="modal-close" data-close aria-label="Close">×</button>
+    </div>
+    <div class="modal-list" id="class-modal-list"></div>
+  </dialog>
+
+  <dialog id="heroic-modal" class="modal" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <div>
+        <h2 id="modal-title">Choose a Heroic Skill</h2>
+        <div class="modal-sub" id="modal-slots"></div>
+      </div>
+      <button class="modal-close" data-close aria-label="Close">×</button>
+    </div>
+    <label class="toggle"><input type="checkbox" id="show-locked"> Show skills you don't qualify for yet</label>
+    <div class="modal-list" id="modal-list"></div>
+  </dialog>
+
+  <button class="reset" id="reset">Reset all</button>
+
+<script>
+  const STORAGE_KEY = "fabula-ultima-tracker";
+
+  // places: list of place values shown, highest first
+  const STATS = [
+    { id: "hp", name: "HP", full: "Hit Points",       color: "var(--hp)", places: [100, 10, 1], max: 999 },
+    { id: "mp", name: "MP", full: "Mind Points",      color: "var(--mp)", places: [100, 10, 1], max: 999 },
+    { id: "ip", name: "IP", full: "Inventory Points", color: "var(--ip)", places: [10, 1],     max: 99 },
+    { id: "fp", name: "FP", full: "Fabula Points",    color: "var(--fp)", places: [1],          max: 9 },
+  ];
+  const PLACE_NAMES = { 100: "100s", 10: "10s", 1: "1s" };
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(values)); } catch {}
+  }
+
+  const values = load();
+  STATS.forEach(s => {
+    const v = Number(values[s.id]);
+    values[s.id] = Number.isFinite(v) ? Math.min(s.max, Math.max(0, Math.round(v))) : 0;
+  });
+
+  const grid = document.getElementById("grid");
+  const refs = {};
+  const cards = {};
+
+  STATS.forEach(stat => {
+    const card = document.createElement("section");
+    card.className = "stat";
+    card.style.setProperty("--accent", stat.color);
+    card.innerHTML = `<h2>${stat.name}<small>${stat.full}</small></h2><div class="max" id="max-${stat.id}"></div><div class="sub" id="sub-${stat.id}"></div>`;
+    cards[stat.id] = card;
+
+    const counter = document.createElement("div");
+    counter.className = "counter";
+    refs[stat.id] = [];
+
+    stat.places.forEach(place => {
+      const col = document.createElement("div");
+      col.className = "place";
+
+      const up = document.createElement("button");
+      up.textContent = "▲";
+      up.setAttribute("aria-label", `Increase ${stat.name} ${PLACE_NAMES[place]}`);
+      up.addEventListener("click", () => change(stat, place));
+
+      const digit = document.createElement("div");
+      digit.className = "digit";
+
+      const down = document.createElement("button");
+      down.textContent = "▼";
+      down.setAttribute("aria-label", `Decrease ${stat.name} ${PLACE_NAMES[place]}`);
+      down.addEventListener("click", () => change(stat, -place));
+
+      col.append(up, digit, down);
+      if (stat.places.length > 1) {
+        const label = document.createElement("span");
+        label.className = "label";
+        label.textContent = PLACE_NAMES[place];
+        col.append(label);
+      }
+      counter.append(col);
+      refs[stat.id].push({ place, digit, up, down });
+    });
+
+    card.append(counter);
+    grid.append(card);
+  });
+
+  // Adding/subtracting the place value carries or borrows naturally
+  // (e.g. 109 + 1 = 110, 100 - 1 = 099), clamped to 0..max.
+  function change(stat, delta) {
+    values[stat.id] = Math.min(stat.max, Math.max(0, values[stat.id] + delta));
+    save();
+    render(stat);
+    renderMaxes();
+  }
+
+  function render(stat) {
+    const v = values[stat.id];
+    refs[stat.id].forEach(({ place, digit, up, down }) => {
+      digit.textContent = Math.floor(v / place) % 10;
+      up.disabled = v >= stat.max;
+      down.disabled = v <= 0;
+    });
+  }
+
+  STATS.forEach(render);
+
+  const NAME_KEY = "fabula-ultima-tracker-name";
+  const nameInput = document.getElementById("char-name");
+  try { nameInput.value = localStorage.getItem(NAME_KEY) || ""; } catch {}
+  nameInput.addEventListener("input", () => {
+    try { localStorage.setItem(NAME_KEY, nameInput.value); } catch {}
+  });
+
+  /* ================= Classes (Core Rulebook only) ================= */
+  // Descriptions are short paraphrases; see the Core Rulebook for full wording.
+  // d(sl, ctx) returns the description for a given Skill Level.
+  // ctx.level = total character level, ctx.sl(name) = SL of another skill in this class.
+  const n = x => `<span class="calc">${x}</span>`;
+
+  const CLASSES = [
+    { id: "arcanist", name: "Arcanist", bonus: { mp: 5 },
+      benefits: ["+5 max MP"],
+      skills: [
+        { name: "Arcane Circle", max: 4, d: sl => `After you willingly dismiss an Arcanum on your turn in a conflict (one not summoned this same turn) while holding an arcane weapon, you may cast a spell for free with a total MP cost of ${n(sl * 5)} or less (you still pay its MP).` },
+        { name: "Arcane Regeneration", max: 2, d: sl => `When you summon an Arcanum, recover ${n(sl * 5)} HP.` },
+        { name: "Bind and Summon", max: 1, d: () => `Bind Arcana to your soul. Use an action and spend 40 MP to summon a bound Arcanum. Taking this at character creation starts you with one Arcanum bound; others are gained through the story.` },
+        { name: "Emergency Arcanum", max: 6, d: sl => `While in Crisis, summoning an Arcanum costs ${n(sl * 5)} fewer MP.` },
+        { name: "Ritual Arcanism", max: 1, d: () => `Perform Arcanism Rituals within the domains of your bound Arcana. Magic Check: WLP + WLP.` },
+      ] },
+    { id: "chimerist", name: "Chimerist", bonus: { mp: 5 },
+      benefits: ["+5 max MP", "Can perform Ritualism Rituals"],
+      skills: [
+        { name: "Consume", max: 5, d: sl => `After you damage one or more creatures with a spell while holding an arcane, dagger, or flail weapon, recover ${n(sl * 2)} MP.` },
+        { name: "Feral Speech", max: 1, d: () => `You can communicate with beasts, monsters, and plants.` },
+        { name: "Pathogenesis", max: 1, d: () => `When a Chimerist spell damages creatures, those sharing a Species with the creature you learned it from become poisoned.` },
+        { name: "Ritual Chimerism", max: 1, d: () => `Perform Chimerism Rituals. Choose INS + WLP or MIG + WLP for their Magic Check when you take this.` },
+        { name: "Spell Mimic", max: 10, d: (sl, c) => `After a beast, monster, or plant you can see casts a spell, you may learn it as a Chimerist spell. You can know up to ${n(sl + 2 + 2 * c.heroic("Chimeric Mastery"))} spells this way. Offensive ones use INS + WLP or MIG + WLP (chosen when first acquired).` },
+      ] },
+    { id: "darkblade", name: "Darkblade", bonus: { hp: 5 },
+      benefits: ["+5 max HP", "Martial melee weapons and martial armor"],
+      skills: [
+        { name: "Agony", max: 5, d: sl => `Once per turn (any turn), after you damage an enemy you have a Bond towards, you may recover ${n(sl * 2)} HP and ${n(sl * 2)} MP.` },
+        { name: "Dark Blood", max: 1, d: () => `While in Crisis, you have Resistance to dark and poison damage.` },
+        { name: "Heart of Darkness", max: 1, d: () => `Once per scene, when you enter Crisis, you may create a Bond of hatred towards a visible creature you have no Bond with.` },
+        { name: "Painful Lessons", max: 3, d: sl => `After another creature makes you lose HP, you may immediately Study it for free with a +${n(sl)} bonus.` },
+        { name: "Shadow Strike", max: 5, d: (sl, c) => `Action: roll your Might die (currently ${n("d" + c.die("mig"))}) and lose that many HP. If you're still above 0 HP, make a free attack that deals ${n(sl)} + the Might roll in extra damage; all its damage becomes dark.` },
+      ] },
+    { id: "elementalist", name: "Elementalist", bonus: { mp: 5 },
+      benefits: ["+5 max MP", "Can perform Ritualism Rituals"],
+      skills: [
+        { name: "Cataclysm", max: 3, d: sl => `When casting an Instantaneous spell while holding an arcane weapon, you may raise its MP cost by up to ${n(sl * 10)}; it deals 5 extra damage per 10 MP added (up to ${n(sl * 5)} extra).` },
+        { name: "Elemental Magic", max: 10, d: sl => `You know ${n(sl)} Elementalist spell${sl === 1 ? "" : "s"} (one per SL). Offensive ones use INS + WLP.` },
+        { name: "Magic Artillery", max: 3, d: sl => `When casting an offensive spell while holding an arcane weapon, +${n(sl * 2)} to the Magic Check.` },
+        { name: "Ritual Elementalism", max: 1, d: () => `Perform Elementalism Rituals. Magic Check: INS + WLP.` },
+        { name: "Spellblade", max: 3, d: sl => `When casting a single-target offensive spell costing ${n(sl * 20)} MP or less, you may use an equipped non-arcane weapon's Accuracy formula for the Magic Check, gaining +${n(sl)} if that formula uses DEX.` },
+      ] },
+    { id: "entropist", name: "Entropist", bonus: { mp: 5 },
+      benefits: ["+5 max MP", "Can perform Ritualism Rituals"],
+      skills: [
+        { name: "Absorb MP", max: 5, d: sl => `After you suffer damage, you may recover ${n(sl * 2)} MP.` },
+        { name: "Entropic Magic", max: 10, d: sl => `You know ${n(sl)} Entropist spell${sl === 1 ? "" : "s"} (one per SL). Offensive ones use INS + WLP.` },
+        { name: "Lucky Seven", max: 1, d: () => `Your lucky number starts each session at 7. Once per scene after rolling for a Check, swap one die's value for your lucky number; the replaced value becomes your new lucky number.` },
+        { name: "Ritual Entropism", max: 1, d: () => `Perform Entropism Rituals. Magic Check: INS + WLP.` },
+        { name: "Stolen Time", max: 4, d: sl => `In a conflict, use an action and spend up to ${n(sl * 5)} MP; pick one different option per 5 MP (up to ${n(sl)}): inflict slow; cure slow; a slowed enemy loses ${n(10 + sl * 5)} HP; a creature takes a free Equipment action; or an ally who hasn't acted goes right after you.` },
+      ] },
+    { id: "fury", name: "Fury", bonus: { hp: 5 },
+      benefits: ["+5 max HP", "Martial melee weapons and martial armor"],
+      skills: [
+        { name: "Adrenaline", max: 5, d: sl => `While in Crisis, you deal ${n(sl * 2)} extra damage from any source.` },
+        { name: "Frenzy", max: 1, d: () => `Accuracy Checks with brawling, dagger, flail, and thrown weapons crit on any doubles (that aren't a fumble).` },
+        { name: "Indomitable Spirit", max: 4, d: sl => `When you spend a Fabula Point to invoke a Bond or Trait, also recover ${n(sl * 5)} HP, or ${n(sl * 5)} MP, or one status effect.` },
+        { name: "Provoke", max: 5, d: sl => `Action, 5 MP: Opposed MIG + WLP Check (+${n(sl)}) against an enemy. On success they're enraged and must include you in their attacks and offensive spells.` },
+        { name: "Withstand", max: 5, d: sl => `When you Guard without covering anyone, recover 5 + (${n(sl)} × your highest Bond strength) HP and raise MIG or WLP one die size until the end of your next turn.` },
+      ] },
+    { id: "guardian", name: "Guardian", bonus: { hp: 5 },
+      benefits: ["+5 max HP", "Martial armor and martial shields"],
+      skills: [
+        { name: "Bodyguard", max: 1, d: () => `When you Guard and cover an ally, they gain Resistance to all damage until the start of your next turn.` },
+        { name: "Defensive Mastery", max: 5, d: sl => `While wearing a shield or martial armor, all damage you take is reduced by ${n(sl)} (before Affinities).` },
+        { name: "Dual Shieldbearer", max: 1, d: (sl, c) => `You can equip a shield in your main hand. With two shields, use them as a two-handed brawling weapon: MIG + MIG, HR + 5 physical, +${n(c.sl("Defensive Mastery"))} damage (your Defensive Mastery SL).` },
+        { name: "Fortress", max: 5, d: sl => `+${n(sl * 3)} max HP.` },
+        { name: "Protect", max: 1, d: () => `Take another creature's place when they're threatened by an attack, spell, or danger. In a conflict, once until the start of your next turn.` },
+      ] },
+    { id: "loremaster", name: "Loremaster", bonus: { mp: 5 },
+      benefits: ["+5 max MP"],
+      skills: [
+        { name: "Flash of Insight", max: 3, d: sl => `On a Result of 13+ when investigating a creature, item, or place (including Study), ask the GM up to ${n(sl)} question${sl === 1 ? "" : "s"} they must answer truthfully. Once per subject.` },
+        { name: "Focused", max: 5, d: sl => `+${n(sl * 3)} max MP, and +${n(sl)} to Open Checks using INS + INS.` },
+        { name: "Knowledge Is Power", max: 1, d: () => `On Accuracy Checks, you may replace one Attribute die with Insight.` },
+        { name: "Quick Assessment", max: 6, d: sl => `At the start of a conflict, spend up to ${n(sl * 5)} MP; for every 5 MP, learn one Trait or one damage Affinity of a creature you can see.` },
+        { name: "Trained Memory", max: 1, d: () => `Perfectly recall any scene from the past week and investigate it again in your mind.` },
+      ] },
+    { id: "orator", name: "Orator", bonus: { mp: 5 },
+      benefits: ["+5 max MP"],
+      skills: [
+        { name: "Condemn", max: 6, d: sl => `Action, 5 MP: Opposed INS + WLP Check (+${n(sl)}) against an enemy who understands you. On success they lose ${n(sl * 5)} MP, become dazed or shaken, and take ${n(sl)} extra damage from all sources until your next turn.` },
+        { name: "Encourage", max: 6, d: sl => `Action, 5 MP: an ally who understands you recovers ${n(sl * 10)} HP and, in a conflict, raises one Attribute a die size until your next turn.` },
+        { name: "My Trust In You", max: 2, d: sl => `Spend 1 Fabula Point to invoke another PC's Trait or Bond on their Check. If you have a Bond towards them, they also recover ${n(sl * 10)} MP.` },
+        { name: "Persuasive", max: 2, d: sl => `After a successful social Check on a Clock, spend up to ${n(sl * 20)} MP to fill or erase 1 extra section per 20 MP.` },
+        { name: "Unexpected Ally", max: 1, d: () => `Action, 1 Fabula Point: a non-hostile creature who understands you becomes helpful as long as you're kind and reasonable.` },
+      ] },
+    { id: "rogue", name: "Rogue", bonus: { ip: 2 },
+      benefits: ["+2 max IP"],
+      skills: [
+        { name: "Cheap Shot", max: 5, d: sl => `When a single-target attack hits a creature with status effects, deal ${n(sl)} + (number of its status effects) extra damage.` },
+        { name: "Dodge", max: 3, d: sl => `With no shield and no martial armor, +${n(sl)} Defense.` },
+        { name: "High Speed", max: 3, d: sl => `At the start of a conflict, spend 10 MP to make a free attack, or a Hinder or Objective action, before round one, with +${n(sl)} to its Checks.` },
+        { name: "See You Later", max: 1, d: () => `Action, 1 Fabula Point: vanish from the scene and reappear later in another scene with another PC.` },
+        { name: "Soul Steal", max: 5, d: sl => `Action: DEX + WLP Check (+${n(sl)}) vs. an enemy's Magic Defense. Soldiers give you ${n(sl)} IP; elites/champions yield a soul treasure worth up to their level × 30 zenit (× 50 for Villains). Once per enemy.` },
+      ] },
+    { id: "sharpshooter", name: "Sharpshooter", bonus: { hp: 5 },
+      benefits: ["+5 max HP", "Martial ranged weapons and martial shields"],
+      skills: [
+        { name: "Barrage", max: 1, d: () => `When making a ranged attack, spend 10 MP to give it multi (2), or raise its multi by one (max 3).` },
+        { name: "Crossfire", max: 1, d: () => `With a ranged weapon equipped, after a creature's ranged Accuracy Check, spend 5 + its Result in MP to make the attack miss (not on a critical).` },
+        { name: "Hawkeye", max: 5, d: sl => `When you Guard without covering anyone, your next ranged attack this scene deals ${n(sl * 3)} extra damage, or make a free bow/firearm attack with HR treated as 0.` },
+        { name: "Ranged Weapon Mastery", max: 4, d: sl => `+${n(sl)} to Accuracy Checks with ranged weapons.` },
+        { name: "Warning Shot", max: 4, d: sl => `When a damaging ranged attack hits, you may deal no damage and instead inflict shaken or slow on each target, or each loses ${n(sl * 10)} MP.` },
+      ] },
+    { id: "spiritist", name: "Spiritist", bonus: { mp: 5 },
+      benefits: ["+5 max MP", "Can perform Ritualism Rituals"],
+      skills: [
+        { name: "Healing Power", max: 2, d: sl => `When a spell targets allies while you hold an arcane weapon, each recovers 3 + (${n(sl)} × number of your Bonds) HP, in addition to the spell.` },
+        { name: "Ritual Spiritism", max: 1, d: () => `Perform Spiritism Rituals. Magic Check: INS + WLP.` },
+        { name: "Spiritual Magic", max: 10, d: sl => `You know ${n(sl)} Spiritist spell${sl === 1 ? "" : "s"} (one per SL). Offensive ones use INS + WLP.` },
+        { name: "Support Magic", max: 1, d: () => `When a spell targets allies while you hold an arcane weapon, one ally you have a Bond towards gains a bonus equal to that Bond's strength on their next Check this scene.` },
+        { name: "Vismagus", max: 1, d: () => `If you lack MP for a spell, pay 10 + its MP cost in HP instead (you can't heal yourself with it).` },
+      ] },
+    { id: "tinkerer", name: "Tinkerer", bonus: { ip: 2 },
+      benefits: ["+2 max IP", "Can start Projects"],
+      skills: [
+        { name: "Emergency Item", max: 1, d: () => `Once per conflict, while in Crisis, take an extra action on your turn; it must be the Inventory action.` },
+        { name: "Gadgets", max: 5, d: sl => `Gain ${n(sl)} gadget benefit tier${sl === 1 ? "" : "s"} across alchemy, infusion, and magitech (basic, then advanced, then superior).` },
+        { name: "Potion Rain", max: 2, d: sl => `A single-target HP/MP restoring potion can affect up to ${n(sl)} extra creature${sl === 1 ? "" : "s"}, restoring half as much to each.` },
+        { name: "Secret Formula", max: 5, d: sl => `Your restoring magispheres and potions restore ${n(sl * 5)} extra HP/MP; your shards, magispheres, and potions deal ${n(sl)} extra damage.` },
+        { name: "Visionary", max: 5, d: sl => `On Projects, up to ${n(sl * 100)} zenit of materials are paid for you and you make ${n(sl)} extra progress per day.` },
+      ] },
+    { id: "wayfarer", name: "Wayfarer", bonus: { ip: 2 },
+      benefits: ["+2 max IP"],
+      skills: [
+        { name: "Faithful Companion", max: 5, d: (sl, c) => `Gain a level 5 beast, construct, elemental, or plant companion with +${n(sl)} to Accuracy and Magic Checks and max HP of (${n(sl)} × its base Might die size) + ${n(Math.floor(c.level / 2))} (half your level). Command it with an action, once per turn.` },
+        { name: "Resourceful", max: 4, d: sl => `Recover ${n(sl)} IP after each travel roll.` },
+        { name: "Tavern Talk", max: 3, d: sl => `When resting at an inn or tavern, ask the GM up to ${n(sl)} question${sl === 1 ? "" : "s"} about the area and its people.` },
+        { name: "Treasure Hunter", max: 2, d: sl => `Your group makes a discovery on a travel roll of ${n(sl + 1)} or lower.` },
+        { name: "Well-Traveled", max: 1, d: () => `Your travel roll die is one size smaller (minimum d6). Doesn't stack between characters.` },
+      ] },
+    { id: "weaponmaster", name: "Weaponmaster", bonus: { hp: 5 },
+      benefits: ["+5 max HP", "Martial melee weapons and martial shields"],
+      skills: [
+        { name: "Bladestorm", max: 1, d: () => `When making a melee attack, spend 10 MP to give it multi (2), or raise its multi by one (max 3).` },
+        { name: "Bone Crusher", max: 4, d: sl => `When a damaging melee attack hits, you may deal no damage and instead inflict dazed or weak on each target, or each loses ${n(sl * 10)} MP.` },
+        { name: "Breach", max: 3, d: sl => `Action, 5 MP: free single-target melee attack. On a hit it deals no damage; instead destroy their shield or armor, or they take ${n(sl * 2)} extra damage from all sources until your next turn.` },
+        { name: "Counterattack", max: 1, d: () => `After an enemy's melee attack against you with an even Accuracy Result, make a free melee attack against them with HR treated as 0.` },
+        { name: "Melee Weapon Mastery", max: 4, d: sl => `+${n(sl)} to Accuracy Checks with melee weapons.` },
+      ] },
+  ];
+  const CLASS_BY_ID = Object.fromEntries(CLASSES.map(c => [c.id, c]));
+  const MAX_CLASS_LEVEL = 10;
+
+  const CLASS_KEY = "fabula-ultima-tracker-classes";
+  // Stored shape: [{ id, skills: { "Skill Name": sl } }]
+  // A class's level is the total of its skill levels (max 10).
+  let myClasses = [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(CLASS_KEY) || "[]");
+    if (Array.isArray(raw)) {
+      raw.forEach(entry => {
+        const def = entry && CLASS_BY_ID[entry.id];
+        if (!def || myClasses.some(c => c.id === def.id)) return;
+        const skills = {};
+        let total = 0;
+        def.skills.forEach(s => {
+          const sl = Math.min(s.max, MAX_CLASS_LEVEL - total, Math.round(Number(entry.skills?.[s.name])) || 0);
+          if (sl > 0) { skills[s.name] = sl; total += sl; }
+        });
+        myClasses.push({ id: def.id, skills });
+      });
+    }
+  } catch {}
+
+  function saveClasses() {
+    try { localStorage.setItem(CLASS_KEY, JSON.stringify(myClasses)); } catch {}
+  }
+
+  const spent = entry => Object.values(entry.skills).reduce((a, b) => a + b, 0);
+  const charLevel = () => myClasses.reduce((a, c) => a + spent(c), 0);
+
+  const classGrid = document.getElementById("class-grid");
+
+  // Bonuses to maximum HP / MP / IP from class benefits, Fortress / Focused, and Heroic Skills
+  function classBonuses() {
+    const level = charLevel();
+    const b = { hp: 0, mp: 0, ip: 0 };
+    myClasses.forEach(m => {
+      const def = CLASS_BY_ID[m.id];
+      for (const k in def.bonus) b[k] += def.bonus[k];
+      b.hp += (m.skills["Fortress"] || 0) * 3;
+      b.mp += (m.skills["Focused"] || 0) * 3;
+    });
+    myHeroics.forEach(name => {
+      const bonus = HEROIC_BY_NAME[name].bonus;
+      if (bonus) for (const k in bonus) b[k] += bonus[k](level);
+    });
+    return b;
+  }
+
+  function renderClasses() {
+    const level = charLevel();
+    document.getElementById("char-level").textContent = `Character level ${level}`;
+    document.getElementById("char-level-big").textContent = level;
+
+    const b = classBonuses();
+    document.getElementById("bonuses").textContent = myClasses.length
+      ? `Bonuses to your maximums from classes and skills: +${b.hp} HP · +${b.mp} MP · +${b.ip} IP`
+      : "";
+
+    if (!myClasses.length) {
+      classGrid.innerHTML = `<p class="empty">No classes yet. Use "Add Class" above.</p>`;
+      return;
+    }
+
+    classGrid.innerHTML = myClasses.map(m => {
+      const def = CLASS_BY_ID[m.id];
+      const used = spent(m);
+      const ctx = { level, sl: name => m.skills[name] || 0, heroic: heroicCount, die: currentDie, statuses: activeStatusCount };
+      const skillsHtml = def.skills.map(s => {
+        const sl = m.skills[s.name] || 0;
+        const canUp = sl < s.max && used < MAX_CLASS_LEVEL;
+        return `
+          <div class="skill ${sl ? "" : "unlearned"}">
+            <div class="skill-head">
+              <span class="skill-name">${s.name}<small>max SL ${s.max}</small></span>
+              <span class="stepper">
+                <button data-act="skill-down" data-class="${m.id}" data-skill="${s.name}" ${sl ? "" : "disabled"} aria-label="Lower ${s.name}">−</button>
+                <span class="val">SL ${sl}</span>
+                <button data-act="skill-up" data-class="${m.id}" data-skill="${s.name}" ${canUp ? "" : "disabled"} aria-label="Raise ${s.name}">+</button>
+              </span>
+            </div>
+            <p>${s.d(Math.max(sl, 1), ctx)}</p>
+          </div>`;
+      }).join("");
+      return `
+        <section class="class-card">
+          <div class="class-top">
+            <h3>${def.name}</h3>
+            <span class="lvl">Lv ${used} / ${MAX_CLASS_LEVEL}</span>
+            <button class="remove" data-act="remove" data-class="${m.id}">Remove</button>
+          </div>
+          <ul class="benefits">${def.benefits.map(x => `<li>${x}</li>`).join("")}</ul>
+          <p class="points">${used >= MAX_CLASS_LEVEL
+            ? "<strong>Mastered!</strong> This class unlocks a Heroic Skill."
+            : "Each skill level you take raises this class's level by 1."}</p>
+          ${skillsHtml}
+        </section>`;
+    }).join("");
+  }
+
+  // ----- Add-class modal -----
+  const classModal = document.getElementById("class-modal");
+  const classModalList = document.getElementById("class-modal-list");
+
+  function renderClassModal() {
+    const ctx = { level: charLevel(), sl: () => 0, heroic: heroicCount, die: currentDie, statuses: activeStatusCount };
+    classModalList.innerHTML = CLASSES.map(def => {
+      const taken = myClasses.some(m => m.id === def.id);
+      return `
+        <div class="option ${taken ? "locked" : ""}">
+          <div class="option-head">
+            <h3>${def.name}</h3>
+            <button class="btn" data-add-class="${def.id}" ${taken ? "disabled" : ""}>${taken ? "Added" : "Add"}</button>
+          </div>
+          <div class="req">Free benefits: ${def.benefits.join(" · ")}</div>
+          <details>
+            <summary>Skills</summary>
+            ${def.skills.map(s => `
+              <div class="opt-skill">
+                <strong>${s.name}</strong><small>max SL ${s.max}</small>
+                <p>${s.max > 1 ? "At SL 1: " : ""}${s.d(1, ctx)}</p>
+              </div>`).join("")}
+          </details>
+        </div>`;
+    }).join("");
+  }
+
+  document.getElementById("open-class").addEventListener("click", () => {
+    renderClassModal();
+    classModal.showModal();
+    classModalList.scrollTop = 0;
+  });
+
+  classModalList.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-add-class]");
+    if (!btn) return;
+    const id = btn.dataset.addClass;
+    if (!CLASS_BY_ID[id] || myClasses.some(c => c.id === id)) return;
+    myClasses.push({ id, skills: {} });
+    saveClasses();
+    renderAll();
+    classModal.close();
+  });
+
+  classGrid.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    const m = myClasses.find(c => c.id === btn.dataset.class);
+    if (!m) return;
+    const def = CLASS_BY_ID[m.id];
+    const skill = def.skills.find(s => s.name === btn.dataset.skill);
+
+    switch (btn.dataset.act) {
+      case "skill-up":
+        if (skill && (m.skills[skill.name] || 0) < skill.max && spent(m) < MAX_CLASS_LEVEL)
+          m.skills[skill.name] = (m.skills[skill.name] || 0) + 1;
+        break;
+      case "skill-down":
+        if (skill && m.skills[skill.name]) {
+          m.skills[skill.name]--;
+          if (!m.skills[skill.name]) delete m.skills[skill.name];
+        }
+        break;
+      case "remove":
+        if (!confirm(`Remove ${def.name} and all its skill levels?`)) return;
+        myClasses = myClasses.filter(c => c !== m);
+        break;
+    }
+    saveClasses();
+    renderAll();
+  });
+
+  /* ================= Heroic Skills (Core Rulebook only) ================= */
+  // You gain one Heroic Skill each time you master a class (reach class level 10).
+  // req.classes: must have mastered at least one of these (empty = no class requirement).
+  // req.skill: must also have at least SL 1 in this skill.
+  // d(ctx): ctx.level = character level, ctx.skill(name) = SL in any class.
+  const lvlStep = (lvl, base) => base + (lvl >= 40 ? 10 : lvl >= 20 ? 5 : 0);
+  const at40 = (lvl, lo, hi) => (lvl >= 40 ? hi : lo);
+
+  const HEROICS = [
+    // General (no class requirement)
+    { name: "Ambidextrous", req: { classes: [] }, d: () => `Two-weapon fighting works with weapons from different Categories, even melee + ranged. With exactly two weapons that share no Category: +2 Defense, and your second attack each turn deals 5 extra damage.` },
+    { name: "Extra HP", req: { classes: [] }, bonus: { hp: l => at40(l, 10, 20) }, d: c => `+${n(at40(c.level, 10, 20))} max HP (20 from level 40).` },
+    { name: "Extra IP", req: { classes: [] }, bonus: { ip: () => 4 }, d: () => `+${n(4)} max IP.` },
+    { name: "Extra MP", req: { classes: [] }, bonus: { mp: l => at40(l, 10, 20) }, d: c => `+${n(at40(c.level, 10, 20))} max MP (20 from level 40).` },
+    { name: "Extra Spells", req: { classes: [] }, d: () => `Learn two spells from one list: Elementalist, Entropist, or Spiritist. They follow that class's casting rules.` },
+    // Class-specific
+    { name: "Arcane Echoes", req: { classes: ["arcanist"] }, d: () => `When a successful Check fills or erases Clock sections and a bound Arcanum's domain applies (GM's call), fill or erase 1 extra section.` },
+    { name: "Revelation", req: { classes: ["arcanist"] }, d: () => `Bind a unique Arcanum you design with the group. Once per scene while merged with an Arcanum, use an action and 2 Fabula Points to trigger its dismiss effect without dismissing it (doesn't trigger Arcane Circle).` },
+    { name: "Chimeric Mastery", max: 2, req: { classes: ["chimerist"] }, d: () => `Spell Mimic also works on two Species of your choice from construct, demon, elemental, and undead, and you can memorize 2 more Chimerist spells. Can be taken twice.` },
+    { name: "Adversity", req: { classes: ["darkblade"] }, d: c => `For each status effect you're suffering: +1 to all Checks and 2 extra damage from any source (currently +${n(c.statuses())} to Checks and +${n(c.statuses() * 2)} damage).` },
+    { name: "Heartbreaker", req: { classes: ["darkblade"] }, d: () => `Once per turn on your turn, when a single-target attack hits a creature you have a Bond towards, spend half your current HP (rounded down) to deal 10 × that Bond's strength in extra damage.` },
+    { name: "Volcano", req: { classes: ["elementalist"] }, d: c => `Learn the spell Volcano (40 MP, Instantaneous): ${n(lvlStep(c.level, 50))} fire damage to one creature you can see, or ${n(lvlStep(c.level, 30))} to every enemy you can see. Ignores Resistances and Immunities. You may reflavor it as air, bolt, earth, or ice.` },
+    { name: "Comet", req: { classes: ["entropist"] }, d: c => `Learn the spell Comet (50 MP, Instantaneous): ${n(lvlStep(c.level, 60))} damage to one creature you can see, or ${n(lvlStep(c.level, 40))} to every enemy you can see. The damage has no type.` },
+    { name: "Monkey Grip", req: { classes: ["fury"] }, d: () => `Wield two-handed flail, heavy, spear, and sword weapons in one hand. Your first two-handed weapon attack each turn deals 5 extra damage and ignores Resistances.` },
+    { name: "Powerful Strike", req: { classes: ["fury", "weaponmaster"] }, d: c => `Your melee attacks deal ${n(at40(c.level, 5, 10))} extra damage (10 from level 40).` },
+    { name: "Rampart", req: { classes: ["guardian"] }, d: () => `During the first round of each conflict, you have Resistance to all damage and can't gain new status effects.` },
+    { name: "Unbreakable", req: { classes: ["guardian"] }, d: () => `Once per scene, when you'd be reduced to 0 HP, drop to 1 HP instead.` },
+    { name: "Mathemagic", req: { classes: ["loremaster"] }, d: () => `When casting a "One creature" spell, pick an Attribute and a die size: the spell instead targets every creature on the scene with that current die size, for double the MP. Offensive spells use one Magic Check against every target.` },
+    { name: "Predictable!", req: { classes: ["loremaster"] }, d: () => `Action, 20 MP: if you know 2+ Traits of a creature you can see, pick Attack, Guard, Objective, Spell, or Skill. Until your next turn, that action costs them 20 MP, or they must do something else.` },
+    { name: "Disarming Rhetoric", req: { classes: ["orator"] }, d: () => `Action: a soldier-rank creature who understands you and is shaken or in Crisis peacefully leaves the conflict if you spend 20 + half its level in MP.` },
+    { name: "Repetition", req: { classes: ["orator"] }, d: () => `Once per turn in a conflict, after using Condemn or Encourage, you may use it again (paying its MP cost again).` },
+    { name: "Pillage", req: { classes: ["rogue"], skill: "Soul Steal" }, d: () => `Soul Steal can target any number of enemies with a single Check against each one's Magic Defense.` },
+    { name: "Vanish", req: { classes: ["rogue"] }, d: () => `When an attack or offensive spell hits, spend 1 Fabula Point: those creatures can't see you until the start of your next turn.` },
+    { name: "Perfect Aim", req: { classes: ["sharpshooter"], skill: "Warning Shot" }, d: () => `Warning Shot applies two different options instead of one.` },
+    { name: "Powerful Shot", req: { classes: ["sharpshooter"] }, d: c => `Your ranged attacks deal ${n(at40(c.level, 5, 10))} extra damage (10 from level 40).` },
+    { name: "Powerful Spell", req: { classes: ["chimerist", "elementalist", "entropist", "spiritist"] }, d: c => `Your spells deal ${n(at40(c.level, 5, 10))} extra damage (10 from level 40).` },
+    { name: "Hope", req: { classes: ["spiritist"] }, d: () => `Learn the spell Hope (40 MP, Instantaneous): a PC who Surrendered but is still in the scene wakes and recovers HP equal to their Crisis score. Once per PC per scene; the Surrender's consequences still apply.` },
+    { name: "Deep Pockets", req: { classes: ["tinkerer"] }, d: () => `Inventory Point costs are reduced by 1 (minimum 1).` },
+    { name: "Upgrade", req: { classes: ["tinkerer"] }, d: c => `When resting, add or swap a default Quality (cost modifier of 1000 zenit or less) on any of your group's weapons, armor, or shields. Pay the total cost minus ${n(c.skill("Visionary") * 100)} zenit (Visionary SL × 100).` },
+    { name: "Heroic Companion", req: { classes: ["wayfarer"], skill: "Faithful Companion" }, d: c => `Your companion gains +10 max HP, deals 5 extra damage, raises one Attribute by one die size, and gains ${n(c.level >= 40 ? 2 : 1)} extra Skill${c.level >= 40 ? "s" : " (a second one at level 40)"}.` },
+    { name: "Status Immunity", req: { classes: ["wayfarer"] }, d: () => `Permanently immune to one status of your choice: dazed, enraged, poisoned, shaken, slow, or weak.` },
+    { name: "Tempest Strike", req: { classes: ["weaponmaster"] }, d: () => `Melee attacks with multi gain a bonus to Accuracy equal to their multi value and deal 5 extra damage (10 if they target only one creature).` },
+  ];
+  const HEROIC_BY_NAME = Object.fromEntries(HEROICS.map(h => [h.name, h]));
+
+  // Core Rulebook page for each Heroic Skill, so players can read the full text.
+  const HEROIC_PAGES = {
+    "Adversity": 234, "Ambidextrous": 234, "Arcane Echoes": 234, "Chimeric Mastery": 234,
+    "Comet": 235, "Deep Pockets": 235, "Disarming Rhetoric": 235, "Extra HP": 235, "Extra IP": 235,
+    "Extra MP": 236, "Extra Spells": 236, "Heartbreaker": 236, "Heroic Companion": 236,
+    "Hope": 237, "Mathemagic": 237,
+    "Monkey Grip": 238, "Perfect Aim": 238, "Pillage": 238, "Powerful Shot": 238,
+    "Powerful Spell": 239, "Powerful Strike": 239, "Predictable!": 239, "Rampart": 239,
+    "Repetition": 240, "Revelation": 240, "Status Immunity": 240, "Tempest Strike": 240, "Unbreakable": 240,
+    "Upgrade": 241, "Vanish": 241, "Volcano": 241,
+  };
+
+  const HEROIC_KEY = "fabula-ultima-tracker-heroics";
+  let myHeroics = [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(HEROIC_KEY) || "[]");
+    if (Array.isArray(raw)) raw.forEach(name => {
+      const h = HEROIC_BY_NAME[name];
+      if (h && myHeroics.filter(x => x === name).length < (h.max || 1)) myHeroics.push(name);
+    });
+  } catch {}
+  function saveHeroics() {
+    try { localStorage.setItem(HEROIC_KEY, JSON.stringify(myHeroics)); } catch {}
+  }
+
+  function heroicCount(name) { return myHeroics.filter(x => x === name).length; }
+  const mastered = () => myClasses.filter(c => spent(c) >= MAX_CLASS_LEVEL).map(c => c.id);
+  const skillAnywhere = name => myClasses.reduce((a, c) => a + (c.skills[name] || 0), 0);
+
+  function meetsReq(h) {
+    const m = mastered();
+    if (!m.length) return false; // a heroic skill is only gained by mastering a class
+    if (h.req.classes.length && !h.req.classes.some(id => m.includes(id))) return false;
+    if (h.req.skill && !skillAnywhere(h.req.skill)) return false;
+    return true;
+  }
+  function reqText(h) {
+    const parts = [];
+    if (h.req.classes.length) parts.push("Mastered " + h.req.classes.map(id => CLASS_BY_ID[id].name).join(" or "));
+    else parts.push("Any mastered class");
+    if (h.req.skill) parts.push(h.req.skill);
+    return "Requires: " + parts.join(" + ") + ` · Core Rulebook p. ${HEROIC_PAGES[h.name]}`;
+  }
+
+  const openHeroicBtn = document.getElementById("open-heroic");
+  const heroicGrid = document.getElementById("heroic-grid");
+  const modal = document.getElementById("heroic-modal");
+  const modalList = document.getElementById("modal-list");
+  const showLocked = document.getElementById("show-locked");
+
+  const freeSlots = () => Math.max(0, mastered().length - myHeroics.length);
+
+  function renderModal() {
+    const free = freeSlots();
+    document.getElementById("modal-slots").textContent = free
+      ? `You can pick ${free} more Heroic Skill${free === 1 ? "" : "s"}.`
+      : mastered().length
+        ? "All your Heroic Skill slots are filled. You can still browse."
+        : "Master a class (level 10) to pick one. You can still browse.";
+
+    const ctx = { level: charLevel(), skill: skillAnywhere, statuses: activeStatusCount };
+    const card = h => {
+      const ok = meetsReq(h);
+      const full = heroicCount(h.name) >= (h.max || 1);
+      const label = full ? "Taken" : ok ? "Select" : "Locked";
+      const canPick = ok && !full && free > 0;
+      return `
+        <div class="option ${ok ? "" : "locked"}">
+          <div class="option-head">
+            <h3>${h.name}</h3>
+            <button class="btn" data-pick="${h.name}" ${canPick ? "" : "disabled"}>${label}</button>
+          </div>
+          <div class="req">${reqText(h)}</div>
+          <p>${h.d(ctx)}</p>
+        </div>`;
+    };
+
+    const available = HEROICS.filter(meetsReq);
+    const locked = HEROICS.filter(h => !meetsReq(h));
+    let html = available.length
+      ? `<div class="modal-group">Available to you</div>` + available.map(card).join("")
+      : `<p class="empty">You don't qualify for any Heroic Skills yet.</p>`;
+    if (showLocked.checked && locked.length) {
+      html += `<div class="modal-group">Not yet available</div>` + locked.map(card).join("");
+    }
+    modalList.innerHTML = html;
+  }
+
+  openHeroicBtn.addEventListener("click", () => {
+    showLocked.checked = !mastered().length; // nothing unlocked yet: show everything to browse
+    renderModal();
+    modal.showModal();
+    modalList.scrollTop = 0;
+  });
+  // Close buttons and backdrop clicks for every modal
+  document.querySelectorAll("dialog.modal").forEach(d => {
+    d.addEventListener("click", e => {
+      if (e.target === d || e.target.closest("[data-close]")) d.close();
+    });
+  });
+  showLocked.addEventListener("change", renderModal);
+
+  modalList.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-pick]");
+    if (!btn) return;
+    const h = HEROIC_BY_NAME[btn.dataset.pick];
+    if (!h || !meetsReq(h) || heroicCount(h.name) >= (h.max || 1) || !freeSlots()) return;
+    myHeroics.push(h.name);
+    saveHeroics();
+    renderAll();
+    if (freeSlots()) renderModal(); else modal.close();
+  });
+
+  function renderHeroics() {
+    const slots = mastered().length;
+    document.getElementById("heroic-count").textContent = `${myHeroics.length} / ${slots} chosen`;
+    openHeroicBtn.textContent = freeSlots() ? "Choose Heroic Skill" : "Browse Heroic Skills";
+
+    if (!myHeroics.length) {
+      heroicGrid.innerHTML = `<p class="empty">${slots
+        ? `You have ${slots} Heroic Skill${slots === 1 ? "" : "s"} to pick. Use "Choose Heroic Skill" above.`
+        : "Raise a class to level 10 to unlock a Heroic Skill."}</p>`;
+      return;
+    }
+
+    const ctx = { level: charLevel(), skill: skillAnywhere, statuses: activeStatusCount };
+    const over = myHeroics.length > slots;
+    heroicGrid.innerHTML = myHeroics.map((name, i) => {
+      const h = HEROIC_BY_NAME[name];
+      return `
+        <section class="class-card">
+          <div class="class-top">
+            <h3>${h.name}</h3>
+            <button class="remove" data-index="${i}">Remove</button>
+          </div>
+          <div class="req">${reqText(h)}</div>
+          ${meetsReq(h) ? "" : `<div class="warn">Requirements no longer met</div>`}
+          <p>${h.d(ctx)}</p>
+        </section>`;
+    }).join("") + (over ? `<p class="warn">You have more Heroic Skills than mastered classes (${slots}).</p>` : "");
+  }
+
+  heroicGrid.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-index]");
+    if (!btn) return;
+    const name = myHeroics[Number(btn.dataset.index)];
+    if (!name || !confirm(`Remove ${name}?`)) return;
+    myHeroics.splice(Number(btn.dataset.index), 1);
+    saveHeroics();
+    renderAll();
+  });
+
+  /* ================= Attributes & status effects ================= */
+  const ATTRS = [
+    { id: "dex", short: "DEX", name: "Dexterity" },
+    { id: "ins", short: "INS", name: "Insight" },
+    { id: "mig", short: "MIG", name: "Might" },
+    { id: "wlp", short: "WLP", name: "Willpower" },
+  ];
+  const DICE = [6, 8, 10, 12];
+  // Each status lowers the listed Attributes by one die size (stacking, minimum d6).
+  const STATUSES = [
+    { id: "slow",     name: "Slow",     hits: ["dex"] },
+    { id: "dazed",    name: "Dazed",    hits: ["ins"] },
+    { id: "weak",     name: "Weak",     hits: ["mig"] },
+    { id: "shaken",   name: "Shaken",   hits: ["wlp"] },
+    { id: "enraged",  name: "Enraged",  hits: ["dex", "ins"] },
+    { id: "poisoned", name: "Poisoned", hits: ["mig", "wlp"] },
+  ];
+
+  const ATTR_KEY = "fabula-ultima-tracker-attributes";
+  const attrState = { base: { dex: 8, ins: 8, mig: 8, wlp: 8 }, status: {} };
+  try {
+    const raw = JSON.parse(localStorage.getItem(ATTR_KEY) || "{}");
+    ATTRS.forEach(a => { if (DICE.includes(raw.base?.[a.id])) attrState.base[a.id] = raw.base[a.id]; });
+    STATUSES.forEach(s => { attrState.status[s.id] = raw.status?.[s.id] === true; });
+  } catch {}
+  function saveAttrs() {
+    try { localStorage.setItem(ATTR_KEY, JSON.stringify(attrState)); } catch {}
+  }
+
+  function currentDie(attrId) {
+    const drops = STATUSES.filter(s => attrState.status[s.id] && s.hits.includes(attrId)).length;
+    return Math.max(6, attrState.base[attrId] - drops * 2);
+  }
+  function activeStatusCount() {
+    return STATUSES.filter(s => attrState.status[s.id]).length;
+  }
+
+  const attrGrid = document.getElementById("attr-grid");
+  const statusRow = document.getElementById("status-row");
+
+  function renderAttrs() {
+    attrGrid.innerHTML = ATTRS.map(a => {
+      const base = attrState.base[a.id];
+      const cur = currentDie(a.id);
+      return `
+        <div class="attr">
+          <div class="attr-name">${a.short}<small>${a.name}</small></div>
+          <div class="attr-die ${cur < base ? "lowered" : ""}">d${cur}</div>
+          <div class="attr-base">${cur < base ? `base d${base}` : ""}</div>
+          <div class="die-picker" role="group" aria-label="${a.name} base die">
+            ${DICE.map(d => `<button data-attr="${a.id}" data-die="${d}" class="${d === base ? "on" : ""}" aria-pressed="${d === base}">d${d}</button>`).join("")}
+          </div>
+        </div>`;
+    }).join("");
+    statusRow.innerHTML = STATUSES.map(s => {
+      const on = attrState.status[s.id];
+      return `<button class="chip ${on ? "on" : ""}" data-status="${s.id}" aria-pressed="${on}">${s.name}<small>${s.hits.map(h => h.toUpperCase()).join(" & ")} −1</small></button>`;
+    }).join("");
+  }
+
+  attrGrid.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-attr]");
+    if (!btn) return;
+    attrState.base[btn.dataset.attr] = Number(btn.dataset.die);
+    saveAttrs();
+    renderAll();
+  });
+  statusRow.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-status]");
+    if (!btn) return;
+    attrState.status[btn.dataset.status] = !attrState.status[btn.dataset.status];
+    saveAttrs();
+    renderAll();
+  });
+
+  // Max HP = Might die × 5 + level; Max MP = Willpower die × 5 + level; Max IP = 6.
+  // Max HP/MP use base die sizes (status effects don't change them). Plus class/skill bonuses.
+  function maxima() {
+    const lvl = charLevel();
+    const b = classBonuses();
+    return {
+      hp: attrState.base.mig * 5 + lvl + b.hp,
+      mp: attrState.base.wlp * 5 + lvl + b.mp,
+      ip: 6 + b.ip,
+    };
+  }
+
+  function renderMaxes() {
+    const m = maxima();
+    ["hp", "mp", "ip"].forEach(id => {
+      const v = values[id], max = m[id];
+      document.getElementById("max-" + id).innerHTML =
+        `<span>Max</span><strong>${max}</strong>${v > max ? `<span class="over">+${v - max} over max</span>` : ""}`;
+      cards[id].classList.toggle("full", v === max);   // green digits
+      cards[id].classList.toggle("over", v > max);     // yellow digits
+    });
+    document.getElementById("max-fp").innerHTML = "";
+
+    // Crisis: current HP is half of max HP (rounded down) or lower
+    const crisis = Math.floor(m.hp / 2);
+    const inCrisis = values.hp > 0 && values.hp <= crisis;
+    cards.hp.classList.toggle("crisis", inCrisis);
+    document.getElementById("sub-hp").innerHTML = inCrisis
+      ? `<span class="crisis-badge">IN CRISIS</span>`
+      : values.hp === 0 ? "At 0 HP" : `Crisis at ${crisis} HP or less`;
+    ["mp", "ip", "fp"].forEach(id => { document.getElementById("sub-" + id).innerHTML = ""; });
+  }
+
+  /* ================= Defenses ================= */
+  // Each defense = current die size of the chosen Attribute + bonus, or a flat value.
+  const DEFENSES = [
+    { id: "def",  short: "DEF",  name: "Defense",       defaultAttr: "dex" },
+    { id: "mdef", short: "MDEF", name: "Magic Defense", defaultAttr: "ins" },
+  ];
+  const DEF_KEY = "fabula-ultima-tracker-defenses";
+  const DEF_BASES = ["dex", "ins", "mig", "wlp", "flat"];
+  const defState = {};
+  try {
+    const raw = JSON.parse(localStorage.getItem(DEF_KEY) || "{}");
+    DEFENSES.forEach(d => {
+      const r = raw[d.id] || {};
+      defState[d.id] = {
+        attr: DEF_BASES.includes(r.attr) ? r.attr : d.defaultAttr,
+        bonus: Math.max(-99, Math.min(99, Math.round(Number(r.bonus)) || 0)),
+      };
+    });
+  } catch {
+    DEFENSES.forEach(d => { defState[d.id] = { attr: d.defaultAttr, bonus: 0 }; });
+  }
+  function saveDefs() {
+    try { localStorage.setItem(DEF_KEY, JSON.stringify(defState)); } catch {}
+  }
+
+  const defGrid = document.getElementById("def-grid");
+  // Built once so typing in the number fields never loses focus; renderDefenses only updates text.
+  defGrid.innerHTML = DEFENSES.map(d => `
+    <div class="def-card">
+      <div class="def-head">
+        <span class="attr-name">${d.short}<small>${d.name}</small></span>
+        <span class="def-value" id="${d.id}-value"></span>
+      </div>
+      <div class="def-controls">
+        <div class="def-field base">
+          <span class="sub-label">Based on</span>
+          <div class="die-picker" role="group" aria-label="${d.name} based on">
+            ${DEF_BASES.map(b => `<button data-def="${d.id}" data-base="${b}">${b === "flat" ? "Flat" : b.toUpperCase()}</button>`).join("")}
+          </div>
+        </div>
+        <div class="def-field">
+          <span class="sub-label" id="${d.id}-bonus-label">Bonus</span>
+          <div class="ticker">
+            <button data-def="${d.id}" data-step="-1" aria-label="Decrease ${d.name} bonus">−</button>
+            <input type="number" inputmode="numeric" min="-99" max="99" step="1" id="${d.id}-bonus" data-def="${d.id}" aria-label="${d.name} bonus">
+            <button data-def="${d.id}" data-step="1" aria-label="Increase ${d.name} bonus">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="def-breakdown" id="${d.id}-breakdown"></div>
+    </div>`).join("");
+
+  const clampBonus = v => Math.max(-99, Math.min(99, Math.round(Number(v)) || 0));
+
+  // Base buttons and ticker +/- buttons
+  defGrid.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-def]");
+    if (!btn) return;
+    const s = defState[btn.dataset.def];
+    if (btn.dataset.base && DEF_BASES.includes(btn.dataset.base)) s.attr = btn.dataset.base;
+    if (btn.dataset.step) s.bonus = clampBonus(s.bonus + Number(btn.dataset.step));
+    saveDefs();
+    renderDefenses();
+  });
+  // Typing directly into the ticker
+  function onDefInput(e) {
+    const t = e.target;
+    if (!t.dataset || !t.dataset.def || t.tagName !== "INPUT") return;
+    if (t.value === "" || t.value === "-") return; // let them finish typing
+    defState[t.dataset.def].bonus = clampBonus(t.value);
+    saveDefs();
+    renderDefenses(true);
+  }
+  defGrid.addEventListener("input", onDefInput);
+  // Tidy the field when it loses focus (e.g. left blank → 0)
+  defGrid.addEventListener("focusout", e => {
+    if (e.target.tagName === "INPUT" && e.target.dataset.def) renderDefenses();
+  });
+
+  // keepInput: true while the user is typing, so we don't overwrite their field mid-edit
+  function renderDefenses(keepInput) {
+    DEFENSES.forEach(d => {
+      const s = defState[d.id];
+      const valueEl = document.getElementById(d.id + "-value");
+      const breakdown = document.getElementById(d.id + "-breakdown");
+      document.getElementById(d.id + "-bonus-label").textContent = s.attr === "flat" ? "Value" : "Bonus";
+      if (!keepInput) document.getElementById(d.id + "-bonus").value = s.bonus;
+      defGrid.querySelectorAll(`button[data-def="${d.id}"][data-base]`).forEach(b => {
+        const on = b.dataset.base === s.attr;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-pressed", on);
+      });
+      defGrid.querySelectorAll(`button[data-def="${d.id}"][data-step]`).forEach(b => {
+        b.disabled = Number(b.dataset.step) < 0 ? s.bonus <= -99 : s.bonus >= 99;
+      });
+      if (s.attr === "flat") {
+        valueEl.textContent = s.bonus;
+        valueEl.classList.remove("lowered");
+        breakdown.textContent = "Flat value (not affected by status effects)";
+        return;
+      }
+      const a = ATTRS.find(x => x.id === s.attr);
+      const cur = currentDie(s.attr), base = attrState.base[s.attr];
+      const sign = s.bonus < 0 ? "−" : "+";
+      valueEl.textContent = cur + s.bonus;
+      valueEl.classList.toggle("lowered", cur < base);
+      breakdown.textContent = `${a.short} d${cur}${cur < base ? ` (lowered from d${base})` : ""} ${sign} ${Math.abs(s.bonus)}`;
+    });
+  }
+
+  function renderAll() {
+    renderAttrs();
+    renderClasses();
+    renderHeroics();
+    renderMaxes();
+    renderDefenses();
+  }
+  renderAll();
+
+  document.getElementById("reset").addEventListener("click", () => {
+    if (!confirm("Reset all values to 0?")) return;
+    STATS.forEach(s => { values[s.id] = 0; render(s); });
+    renderMaxes();
+    save();
+  });
+
+  /* ================= Rest ================= */
+  // Resting restores all HP and MP and clears status effects.
+  document.getElementById("rest").addEventListener("click", () => {
+    if (!confirm("Rest? HP and MP are set to their max and all status effects are cleared.")) return;
+    const m = maxima();
+    values.hp = Math.min(999, m.hp);
+    values.mp = Math.min(999, m.mp);
+    STATUSES.forEach(s => { attrState.status[s.id] = false; });
+    save();
+    saveAttrs();
+    STATS.forEach(render);
+    renderAll();
+  });
+
+  /* ================= Save / Load ================= */
+  const SAVE_APP = "fabula-ultima-tracker";
+  const SAVE_VERSION = 1;
+
+  function exportData() {
+    return {
+      app: SAVE_APP,
+      version: SAVE_VERSION,
+      name: nameInput.value,
+      stats: { ...values },
+      attributes: attrState,
+      defenses: defState,
+      classes: myClasses,
+      heroics: myHeroics,
+    };
+  }
+
+  const saveModal = document.getElementById("save-modal");
+  const saveText = document.getElementById("save-text");
+  const saveMsg = document.getElementById("save-msg");
+  document.getElementById("open-save").addEventListener("click", () => {
+    saveText.value = JSON.stringify(exportData(), null, 2);
+    saveMsg.textContent = "";
+    saveModal.showModal();
+    saveText.focus();
+    saveText.select();
+  });
+  document.getElementById("copy-save").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(saveText.value);
+      saveMsg.textContent = "Copied!";
+    } catch {
+      saveText.focus();
+      saveText.select();
+      saveMsg.textContent = "Couldn't copy automatically. The text is selected, so press Ctrl+C (or ⌘C).";
+    }
+  });
+
+  const loadModal = document.getElementById("load-modal");
+  const loadText = document.getElementById("load-text");
+  const loadMsg = document.getElementById("load-msg");
+  document.getElementById("open-load").addEventListener("click", () => {
+    loadText.value = "";
+    loadMsg.textContent = "";
+    loadMsg.className = "modal-msg";
+    loadModal.showModal();
+    loadText.focus();
+  });
+  document.getElementById("do-load").addEventListener("click", () => {
+    const fail = msg => { loadMsg.textContent = msg; loadMsg.className = "modal-msg error"; };
+    let data;
+    try { data = JSON.parse(loadText.value); }
+    catch { return fail("That isn't valid save text. Make sure you copied all of it."); }
+    if (!data || typeof data !== "object" || data.app !== SAVE_APP) {
+      return fail("That doesn't look like a save from this tracker.");
+    }
+    if (!confirm("Replace the current character with this save?")) return;
+    // Write each part to storage; the page's normal loading code validates it on reload.
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.stats || {}));
+      localStorage.setItem(NAME_KEY, typeof data.name === "string" ? data.name : "");
+      localStorage.setItem(ATTR_KEY, JSON.stringify(data.attributes || {}));
+      localStorage.setItem(DEF_KEY, JSON.stringify(data.defenses || {}));
+      localStorage.setItem(CLASS_KEY, JSON.stringify(Array.isArray(data.classes) ? data.classes : []));
+      localStorage.setItem(HEROIC_KEY, JSON.stringify(Array.isArray(data.heroics) ? data.heroics : []));
+    } catch {
+      return fail("Couldn't write to this browser's storage (it may be blocked or in private mode).");
+    }
+    location.reload();
+  });
+</script>
+</body>
+</html>
