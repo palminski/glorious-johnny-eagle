@@ -21,6 +21,7 @@
     --full: #4ade80;      /* digit colour when at max (digits sit on a dark tile) */
     --overheal: #facc15;  /* digit colour when above max */
     --over-text: #a16207;
+    --mastered: #e0b100;  /* yellow border on mastered (level 10) classes */
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -251,6 +252,10 @@
     border-radius: 12px;
     padding: 16px;
     min-width: 0;
+  }
+  .class-card.mastered {
+    border: 2px solid var(--mastered);
+    padding: 15px; /* keep the same outer size with the thicker border */
   }
   .class-top {
     display: flex;
@@ -1035,7 +1040,11 @@
       const def = CLASS_BY_ID[m.id];
       const used = spent(m);
       const ctx = { level, sl: name => m.skills[name] || 0, heroic: heroicCount, die: currentDie, statuses: activeStatusCount };
-      const skillsHtml = def.skills.map(s => {
+      const isMastered = used >= MAX_CLASS_LEVEL;
+      // Learned skills first (book order within each group); a mastered class hides unlearned ones.
+      const learned = def.skills.filter(s => m.skills[s.name]);
+      const unlearned = isMastered ? [] : def.skills.filter(s => !m.skills[s.name]);
+      const skillsHtml = [...learned, ...unlearned].map(s => {
         const sl = m.skills[s.name] || 0;
         const canUp = sl < s.max && used < MAX_CLASS_LEVEL;
         return `
@@ -1052,7 +1061,7 @@
           </div>`;
       }).join("");
       return `
-        <section class="class-card">
+        <section class="class-card ${isMastered ? "mastered" : ""}">
           <div class="class-top">
             <h3>${def.name}</h3>
             <span class="lvl">Lv ${used} / ${MAX_CLASS_LEVEL}</span>
